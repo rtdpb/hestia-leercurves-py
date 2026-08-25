@@ -20,14 +20,31 @@ README.
 from __future__ import annotations
 
 import csv
+import tomllib
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from enum import Enum
+from functools import lru_cache
+from importlib import resources
 from pathlib import Path
 
 from .interpolation import interpolate_linear
 
 __all__ = ["Scenario", "CurveSettings", "AnchorCurve", "LearningCurveModel"]
+
+_DEFAULT_SETTINGS_RESOURCE = "default_settings.toml"
+
+
+@lru_cache(maxsize=1)
+def _default_settings() -> dict[str, float]:
+    """Load the bundled default shift values from ``default_settings.toml``.
+
+    Kept in a config file (the single source of truth) rather than hard-coded,
+    mirroring the GeoDMS ``DefaultSettings/Basis.dms`` layer of the model.
+    """
+    resource = resources.files(__package__).joinpath(_DEFAULT_SETTINGS_RESOURCE)
+    with resource.open("rb") as handle:
+        return dict(tomllib.load(handle)["curve"])
 
 
 class Scenario(str, Enum):
@@ -48,11 +65,32 @@ class CurveSettings:
     * ``learning_shift`` -> ``LeercurveGebruikSchuif``
       (0.0 = costs constant at 100%, 1.0 = learning curve fully in use).
 
-    Defaults match the public Hestia ``DefaultSettings/Basis.dms``.
+    The default values are loaded from the bundled ``default_settings.toml``
+    (which mirrors the public Hestia ``DefaultSettings/Basis.dms``), so no shift
+    values are hard-coded in Python. Load your own file with :meth:`from_toml`.
     """
 
-    min_max_shift: float = 0.5
-    learning_shift: float = 1.0
+    min_max_shift: float = field(
+        default_factory=lambda: _default_settings()["min_max_shift"]
+    )
+    learning_shift: float = field(
+        default_factory=lambda: _default_settings()["learning_shift"]
+    )
+
+    @classmethod
+    def from_toml(cls, path: str | Path) -> "CurveSettings":
+        """Build settings from a TOML file with a ``[curve]`` table.
+
+        Missing keys fall back to the bundled defaults, so a config file may
+        override just one shift.
+        """
+        with Path(path).open("rb") as handle:
+            curve = tomllib.load(handle).get("curve", {})
+        defaults = _default_settings()
+        return cls(
+            min_max_shift=float(curve.get("min_max_shift", defaults["min_max_shift"])),
+            learning_shift=float(curve.get("learning_shift", defaults["learning_shift"])),
+        )
 
     def __post_init__(self) -> None:
         for name, value in (

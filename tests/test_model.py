@@ -104,3 +104,29 @@ def test_anchor_curve_length_validation() -> None:
 def test_scenario_enum_values() -> None:
     assert Scenario("optimistic") is Scenario.OPTIMISTIC
     assert Scenario("pessimistic") is Scenario.PESSIMISTIC
+
+
+def test_default_settings_come_from_bundled_toml() -> None:
+    # The defaults live in default_settings.toml, not hard-coded in Python.
+    settings = CurveSettings()
+    assert settings.min_max_shift == 0.5
+    assert settings.learning_shift == 1.0
+
+
+def test_settings_from_toml(tmp_path) -> None:
+    config = tmp_path / "settings.toml"
+    config.write_text(
+        "[curve]\nmin_max_shift = 0.25\nlearning_shift = 0.5\n", encoding="utf-8"
+    )
+    settings = CurveSettings.from_toml(config)
+    assert settings.min_max_shift == 0.25
+    assert settings.learning_shift == 0.5
+
+
+def test_settings_from_toml_falls_back_to_defaults(tmp_path) -> None:
+    # A config that overrides only one shift keeps the bundled default for the other.
+    config = tmp_path / "partial.toml"
+    config.write_text("[curve]\nmin_max_shift = 0.0\n", encoding="utf-8")
+    settings = CurveSettings.from_toml(config)
+    assert settings.min_max_shift == 0.0
+    assert settings.learning_shift == 1.0

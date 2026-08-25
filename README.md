@@ -74,7 +74,7 @@ return base * learning + 1.0 * (1.0 - learning)
 |---|---|---|
 | `container` of `attribute`s over a `Periode` unit | `AnchorCurve` dataclass with `years`/`optimistic`/`pessimistic` tuples | Explicit, immutable, self-validating data. |
 | `template MaakCurve` (per-item instantiation) | `LearningCurveModel.factor()` method | Behaviour lives in one place; instances are cheap to reuse. |
-| `Schuiven` parameters from `DefaultSettings/Basis.dms` | `CurveSettings` dataclass (defaults `0.5`, `1.0`) | Same defaults as the public model; validated to `[0, 1]`. |
+| `Schuiven` parameters from `DefaultSettings/Basis.dms` | `CurveSettings` dataclass, defaults loaded from `default_settings.toml` | Config, not code: the shift values live in a TOML file (like GeoDMS' settings layer), validated to `[0, 1]`. Override with `CurveSettings.from_toml(...)`. |
 | `interpolate_linear` (clamps outside range) | `interpolation.interpolate_linear` | Reproduced exactly, incl. constant extrapolation. |
 | implicit `Default` references (`EWV := Default`) | resolved once into `data/leercurves.csv` | Keeps the runtime model simple; data stays declarative. |
 
@@ -99,6 +99,25 @@ model.factors("Warmtenet", [2030, 2050])  # {2030: 1.0, 2050: 0.99}
 optimistic = LearningCurveModel.from_csv("data/leercurves.csv",
                                          CurveSettings(min_max_shift=0.0))
 optimistic.factor("Waterstof", 2050)      # 0.48
+```
+
+### Settings as config, not code
+
+The default shift values are not hard-coded in Python; they live in
+`src/hestia_leercurves/default_settings.toml` (the single source of truth,
+mirroring the GeoDMS `DefaultSettings/Basis.dms` layer):
+
+```toml
+[curve]
+min_max_shift  = 0.5   # 0 = optimistic, 1 = pessimistic
+learning_shift = 1.0   # 0 = costs constant, 1 = full learning curve
+```
+
+Point at your own file to change a scenario without touching code:
+
+```python
+settings = CurveSettings.from_toml("my-settings.toml")   # missing keys fall back to defaults
+model = LearningCurveModel.from_csv("data/leercurves.csv", settings)
 ```
 
 Run the demo:

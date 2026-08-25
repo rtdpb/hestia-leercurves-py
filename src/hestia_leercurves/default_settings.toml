@@ -1,0 +1,14 @@
+# Default learning-curve settings ("schuiven") for the Hestia leercurve port.
+#
+# These are the single source of truth for the default shift values, kept in a
+# config file rather than hard-coded in Python. They mirror the GeoDMS defaults
+# in the public Hestia model (Runs/DefaultSettings/Basis.dms). Override them at
+# runtime with CurveSettings.from_toml("your-settings.toml").
+
+[curve]
+# LeercurveMinMaxSchuif: 0.0 = optimistic curve, 1.0 = pessimistic curve.
+min_max_shift = 0.5
+
+# LeercurveGebruikSchuif: 0.0 = costs stay constant at 100%, 1.0 = learning
+# curve fully applied.
+learning_shift = 1.0
