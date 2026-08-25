@@ -11,10 +11,12 @@ pessimistic scenario. For a given view year ("zichtjaar") the model:
 3. optionally dampens the effect with a learning shift (``learning_shift``:
    0 = costs stay constant, 1 = the full curve is applied).
 
-This module reproduces that computation. The reference GeoDMS source is the
-``MaakCurve`` template in ``model/stam/CalculationSchemes.dms`` (lines 104-114)
-of the public Hestia repository; the mapping is documented in the project
-README.
+This module is a faithful reimplementation of that computation, based on the
+public GeoDMS source: the ``MaakCurve`` template in
+``model/stam/CalculationSchemes.dms`` (lines 104-114) of the public Hestia
+repository; the mapping is documented in the project README. Numerical
+equivalence against a running GeoDMS reference model has not yet been
+established.
 """
 
 from __future__ import annotations
@@ -23,7 +25,7 @@ import csv
 import tomllib
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from functools import lru_cache
 from importlib import resources
 from pathlib import Path
@@ -47,7 +49,7 @@ def _default_settings() -> dict[str, float]:
         return dict(tomllib.load(handle)["curve"])
 
 
-class Scenario(str, Enum):
+class Scenario(StrEnum):
     """Cost-development scenario for a learning curve."""
 
     OPTIMISTIC = "optimistic"
@@ -78,7 +80,7 @@ class CurveSettings:
     )
 
     @classmethod
-    def from_toml(cls, path: str | Path) -> "CurveSettings":
+    def from_toml(cls, path: str | Path) -> CurveSettings:
         """Build settings from a TOML file with a ``[curve]`` table.
 
         Missing keys fall back to the bundled defaults, so a config file may
@@ -106,7 +108,10 @@ class AnchorCurve:
     """Anchor cost factors (in percent) for one technology.
 
     ``optimistic`` and ``pessimistic`` hold the cost factor at each year in
-    ``years``. A value of 100 means "equal to the 2020 reference cost".
+    ``years``. A value of 100 means 100% of that technology's base cost. Most
+    technologies are indexed to a 2020 reference (factor 100 in 2020); in Hestia
+    1.2 insulation (``Isolatie``) and ventilation (``Ventilatie``) were
+    reindexed around 2023, so their 100% point sits near 2023 rather than 2020.
     """
 
     years: tuple[int, ...]
@@ -149,7 +154,7 @@ class LearningCurveModel:
         cls,
         path: str | Path,
         settings: CurveSettings | None = None,
-    ) -> "LearningCurveModel":
+    ) -> LearningCurveModel:
         """Build a model from a tidy CSV with the columns produced by the port.
 
         Expected columns: ``technology``, ``scenario`` (``optimistic`` /
@@ -196,9 +201,11 @@ class LearningCurveModel:
         return sorted(self._curves)
 
     def factor(self, technology: str, year: int) -> float:
-        """Return the cost factor for ``technology`` in ``year`` (1.0 = 100%).
+        """Return the cost factor for ``technology`` in ``year``.
 
-        Reproduces the GeoDMS ``MaakCurve`` template:
+        ``1.0`` means 100% of that technology's base cost (see :class:`AnchorCurve`
+        for the reference year). Reimplements the published GeoDMS ``MaakCurve``
+        template:
 
             CurveMin = interpolate_linear(year, years, optimistic) / 100
             CurveMax = interpolate_linear(year, years, pessimistic) / 100

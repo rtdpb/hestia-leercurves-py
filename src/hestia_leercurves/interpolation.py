@@ -3,8 +3,9 @@
 This mirrors the behaviour of GeoDMS' ``interpolate_linear`` as it is used in
 Hestia's ``MaakCurve`` template: between the anchor points the value is
 interpolated linearly, and outside the anchor range the value is clamped to the
-nearest endpoint (constant extrapolation). Keeping this behaviour identical is
-what makes the Python port numerically faithful to the original model.
+nearest endpoint (constant extrapolation). This matches the behaviour of the
+public GeoDMS source; the exact extrapolation behaviour of the closed model
+should still be confirmed against a running GeoDMS reference.
 """
 
 from __future__ import annotations
@@ -39,7 +40,7 @@ def interpolate_linear(
         raise ValueError(f"xs and ys must be equal length, got {len(xs)} and {len(ys)}")
     if len(xs) == 0:
         raise ValueError("xs and ys must contain at least one anchor")
-    if any(b <= a for a, b in zip(xs, xs[1:])):
+    if any(b <= a for a, b in zip(xs, xs[1:], strict=False)):
         raise ValueError(f"xs must be strictly increasing, got {list(xs)}")
 
     # Constant extrapolation outside the anchor range.
