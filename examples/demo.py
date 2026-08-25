@@ -7,9 +7,14 @@ Run from the project root:
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
-from hestia_leercurves import CurveSettings, LearningCurveModel
+# Make the demo runnable straight from a fresh clone ("python examples/demo.py")
+# without needing `pip install` first, by putting the package's src/ on the path.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from hestia_leercurves import CurveSettings, LearningCurveModel  # noqa: E402
 
 DATA_CSV = Path(__file__).resolve().parents[1] / "data" / "leercurves.csv"
 
