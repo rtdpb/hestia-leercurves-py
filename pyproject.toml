@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hestia-leercurves"
+version = "0.1.0"
+description = "Clean Python port of Hestia's learning-curve (leercurve) logic, ported from GeoDMS."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "GPL-3.0-or-later" }
+authors = [{ name = "Ronald Bontekoning", email = "267683170+rtdpb@users.noreply.github.com" }]
+keywords = ["hestia", "pbl", "energy", "warmtetransitie", "geodms"]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "matplotlib>=3.5"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 90
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
